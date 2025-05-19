@@ -2,6 +2,7 @@ from typing import Optional, List, Dict, Any
 from pydantic import Field, BaseModel, ConfigDict
 from ..interfaces.tool import Tool, BaseToolInput, ToolResponse
 import httpx
+import logging
 
 
 class MessageFilter(BaseModel):
@@ -71,12 +72,14 @@ class GetUnreadMessagesTool(Tool):
 
     async def execute(self, input_data: GetUnreadMessagesInput) -> ToolResponse:
         url = f"http://{input_data.backend_host}/api/team/{input_data.team_id}/messages"
-        # Use POST /messages/query if filters are provided, else fallback to GET
+        # Always use POST /messages/query if filters are provided
         if input_data.filters:
             query_url = f"{url}/query"
             payload = input_data.filters.model_dump()
+            print(f"[DEBUG] POST {query_url} | payload={payload}")
             async with httpx.AsyncClient() as client:
                 resp = await client.post(query_url, json=payload)
+                print(f"[DEBUG] Response status: {resp.status_code}, body: {resp.text}")
                 resp.raise_for_status()
                 data = resp.json()
                 messages = [MessageModel(**m) for m in data.get("messages", [])]
@@ -96,8 +99,10 @@ class GetUnreadMessagesTool(Tool):
                 params["dm_only"] = str(input_data.dm_only).lower()
             if input_data.content_regex:
                 params["content_regex"] = input_data.content_regex
+            print(f"[DEBUG] GET {url} | params={params}")
             async with httpx.AsyncClient() as client:
                 resp = await client.get(url, params=params)
+                print(f"[DEBUG] Response status: {resp.status_code}, body: {resp.text}")
                 resp.raise_for_status()
                 data = resp.json()
                 messages = [MessageModel(**m) for m in data.get("messages", [])]
