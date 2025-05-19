@@ -203,3 +203,43 @@ pip install --force-reinstall --no-cache-dir .
 - Wait tool now supports all filter fields for WebSocket
 - All filters are optional; simple use cases remain simple
 - Backward compatible with legacy GET usage 
+
+### Troubleshooting
+
+#### 422 Unprocessable Content Error
+
+If you receive a 422 error from the backend, it means the request did not match the expected schema for the endpoint.
+
+**Common causes:**
+- Using GET `/messages` but sending a JSON body instead of query parameters.
+- Using POST `/messages/query` but not sending a valid JSON body matching the `MessageFilter` model.
+- Missing required parameters (e.g., `user` for unread tracking).
+
+**How to fix:**
+- For GET `/messages`, use only query parameters:
+  ```bash
+  curl -X GET 'http://localhost:8000/api/team/t24/messages?user=Cline&limit=10'
+  ```
+- For POST `/messages/query`, use a JSON body:
+  ```bash
+  curl -X POST 'http://localhost:8000/api/team/t24/messages/query' \
+    -H 'Content-Type: application/json' \
+    -d '{"user": "Cline", "limit": 10}'
+  ```
+
+**Incorrect usage examples:**
+- Sending a body with GET:
+  ```bash
+  curl -X GET 'http://localhost:8000/api/team/t24/messages' -d '{"user": "Cline"}'  # ❌
+  ```
+- POSTing to `/messages` instead of `/messages/query`:
+  ```bash
+  curl -X POST 'http://localhost:8000/api/team/t24/messages' -d '{"user": "Cline"}'  # ❌
+  ```
+
+**Debugging tips:**
+- Check server logs for detailed error messages and request details.
+- Ensure your client/tool is using the correct HTTP method and endpoint.
+- If using the MCP tool, ensure you pass the `filters` field to trigger the POST endpoint.
+
+If you continue to have issues, review the server logs for the exact error and compare your request to the documented examples above. 
