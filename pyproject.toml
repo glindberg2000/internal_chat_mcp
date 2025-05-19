@@ -3,12 +3,13 @@ name = "internal_chat_mcp"
 version = "0.1.0"
 description = "internal_chat_mcp MCP server"
 authors = [{ name = "Greg Lindberg", email = "greglindberg@gmail.com" }]
-requires-python = ">=3.10"
+requires-python = ">=3.8"
 dependencies = [
     "mcp[cli]",
-    "rich>=13.0.0",
     "pydantic>=2.0.0",
+    "rich>=13.0.0",
     "uvicorn>=0.15.0",
+    "websockets"
 ]
 
 [build-system]
