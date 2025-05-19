@@ -1,4 +1,4 @@
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, List
 from pydantic import Field, BaseModel, ConfigDict
 from ..interfaces.tool import Tool, BaseToolInput, ToolResponse
 import asyncio
@@ -7,20 +7,27 @@ import json
 import re
 
 
+class MessageFilter(BaseModel):
+    user: Optional[str] = None
+    channels: Optional[List[str]] = None
+    dm_only: Optional[bool] = None
+    mention_only: Optional[bool] = None
+    content_regex: Optional[str] = None
+    from_user: Optional[str] = None
+    before: Optional[str] = None
+    after: Optional[str] = None
+    sort: Optional[str] = "asc"
+    limit: Optional[int] = 20
+
+
 class WaitForMessageInput(BaseToolInput):
     team_id: str = Field(..., description="Team ID to listen for messages")
     backend_host: str = Field(
         default="localhost:8000",
         description="Backend host and port (default: localhost:8000)",
     )
-    sender: Optional[str] = Field(
-        None, description="Only match messages from this user"
-    )
-    mention_only: Optional[bool] = Field(
-        False, description="Only match messages containing '@'"
-    )
-    content_regex: Optional[str] = Field(
-        None, description="Only match messages matching this regex"
+    filters: Optional[MessageFilter] = Field(
+        None, description="Advanced message filter (all fields optional)"
     )
     timeout: int = Field(
         default=30, description="Timeout in seconds to wait for a message"
@@ -39,9 +46,7 @@ class WaitForMessageOutput(BaseModel):
 
 class WaitForMessageTool(Tool):
     name = "WaitForMessage"
-    description = (
-        "Wait for a message matching criteria on the internal team chat (WebSocket)."
-    )
+    description = "Wait for a message matching criteria on the internal team chat (WebSocket). Supports advanced filters."
     input_model = WaitForMessageInput
     output_model = WaitForMessageOutput
 
@@ -55,6 +60,7 @@ class WaitForMessageTool(Tool):
 
     async def execute(self, input_data: WaitForMessageInput) -> ToolResponse:
         ws_url = f"ws://{input_data.backend_host}/ws/{input_data.team_id}"
+        filter = input_data.filters or MessageFilter()
         try:
             async with websockets.connect(ws_url) as websocket:
                 try:
@@ -63,19 +69,23 @@ class WaitForMessageTool(Tool):
                             websocket.recv(), timeout=input_data.timeout
                         )
                         msg = json.loads(msg_raw)
-                        # Match sender
-                        if input_data.sender and msg.get("user") != input_data.sender:
+                        # Apply filter fields
+                        if filter.from_user and msg.get("user") != filter.from_user:
                             continue
-                        # Match mention_only
-                        if input_data.mention_only and "@" not in msg.get(
-                            "message", ""
+                        if filter.mention_only and "@" not in msg.get("message", ""):
+                            continue
+                        if filter.content_regex and not re.search(
+                            filter.content_regex, msg.get("message", "")
                         ):
                             continue
-                        # Match content_regex
-                        if input_data.content_regex and not re.search(
-                            input_data.content_regex, msg.get("message", "")
+                        if (
+                            filter.channels
+                            and msg.get("channel", "general") not in filter.channels
                         ):
                             continue
+                        if filter.dm_only and msg.get("channel") is not None:
+                            continue
+                        # Add more filter logic as needed
                         output = WaitForMessageOutput(
                             id=None,  # Not available from WS, unless backend echoes
                             user=msg.get("user"),
