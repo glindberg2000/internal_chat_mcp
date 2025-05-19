@@ -2,7 +2,7 @@
 name = "internal_chat_mcp"
 version = "0.1.0"
 description = "internal_chat_mcp MCP server"
-authors = ["Your Name <your@email.com>"]
+authors = [{ name = "Greg Lindberg", email = "greglindberg@gmail.com" }]
 requires-python = ">=3.10"
 dependencies = [
     "mcp[cli]",
