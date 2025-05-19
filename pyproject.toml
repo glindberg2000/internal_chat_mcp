@@ -1,0 +1,19 @@
+[project]
+name = "internal_chat_mcp"
+version = "0.1.0"
+description = "internal_chat_mcp MCP server"
+authors = ["Your Name <your@email.com>"]
+requires-python = ">=3.10"
+dependencies = [
+    "mcp[cli]",
+    "rich>=13.0.0",
+    "pydantic>=2.0.0",
+    "uvicorn>=0.15.0",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project.scripts]
+internal-chat-mcp = "internal_chat_mcp.server:main" 
