@@ -242,4 +242,29 @@ If you receive a 422 error from the backend, it means the request did not match 
 - Ensure your client/tool is using the correct HTTP method and endpoint.
 - If using the MCP tool, ensure you pass the `filters` field to trigger the POST endpoint.
 
-If you continue to have issues, review the server logs for the exact error and compare your request to the documented examples above. 
+If you continue to have issues, review the server logs for the exact error and compare your request to the documented examples above.
+
+### Testing the Tools (test_get_unread_messages.py)
+
+A test script is provided to verify end-to-end connectivity between the MCP tool and the backend chat server. This script can be run locally or in containers, and supports configuration via environment variables or command-line arguments.
+
+**Usage:**
+
+```bash
+# All defaults (localhost:8000, team_id=t24, user=Cline)
+python test_get_unread_messages.py
+
+# Set backend host only
+python test_get_unread_messages.py host.docker.internal:8000
+
+# Set backend host, team, and user via args
+python test_get_unread_messages.py host.docker.internal:8000 myteam myuser
+
+# Or use environment variables
+export BACKEND_HOST=host.docker.internal:8000
+export TEAM_ID=myteam
+export USER=myuser
+python test_get_unread_messages.py
+```
+
+**This script is the recommended way to verify that your MCP tool and backend are communicating correctly in any environment.** 
