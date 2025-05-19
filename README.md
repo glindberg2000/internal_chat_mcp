@@ -119,4 +119,87 @@ This is particularly useful during active development as you won't need to manua
 
 ## Learn More About MCP
 
-Visit the official [Model Context Protocol Documentation](https://modelcontextprotocol.io/) for detailed information about the protocol, concepts, and advanced features. 
+Visit the official [Model Context Protocol Documentation](https://modelcontextprotocol.io/) for detailed information about the protocol, concepts, and advanced features.
+
+## Advanced Message Retrieval & Filtering (v0.1.0+)
+
+### MessageFilter Model
+
+The `MessageFilter` model allows for flexible, future-proof filtering of chat messages. All fields are optional and have sensible defaults. This model is used for both REST and WebSocket tools.
+
+```python
+class MessageFilter(BaseModel):
+    user: Optional[str] = None           # For unread tracking
+    channels: Optional[List[str]] = None # If None, defaults to ["general"]
+    dm_only: Optional[bool] = None
+    mention_only: Optional[bool] = None
+    content_regex: Optional[str] = None
+    from_user: Optional[str] = None
+    before: Optional[str] = None
+    after: Optional[str] = None
+    sort: Optional[str] = "asc"
+    limit: Optional[int] = 20
+```
+
+### REST API Usage
+
+#### Simple (Get Unread)
+```bash
+curl -X POST 'http://localhost:8000/api/team/<team_id>/messages/query' \
+  -H 'Content-Type: application/json' \
+  -d '{"user": "Cline"}'
+```
+Returns all unread messages for user `Cline` in the default channel ("general"), up to 20 messages.
+
+#### Advanced (Custom Filters)
+```bash
+curl -X POST 'http://localhost:8000/api/team/<team_id>/messages/query' \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "user": "Cline",
+    "channels": ["dev", "support"],
+    "mention_only": true,
+    "content_regex": "@Cline|urgent",
+    "limit": 50
+  }'
+```
+Returns up to 50 unread messages for `Cline` in "dev" or "support" channels, only those that mention them or match the regex.
+
+### WebSocket Wait/Subscribe Usage
+
+The `WaitForMessageTool` supports all filter fields. Example input:
+```json
+{
+  "team_id": "t24",
+  "backend_host": "localhost:8000",
+  "filters": {
+    "mention_only": true,
+    "channels": ["general"]
+  },
+  "timeout": 30
+}
+```
+The tool will only return when a message matching the filter is received.
+
+### MCP Tool Integration
+
+- Use the `filters` field in `GetUnreadMessagesTool` and `WaitForMessageTool` for advanced queries.
+- For simple use, only `user` is required; all other fields are optional.
+- For advanced use, provide any combination of filter fields.
+
+### Upgrading/Installing
+
+To upgrade to the latest version:
+```bash
+git pull origin main
+pip install --force-reinstall --no-cache-dir .
+```
+
+### Changelog
+
+#### v0.1.0 (Advanced Filtering Release)
+- Add `MessageFilter` model for flexible, future-proof filtering
+- Support advanced queries via POST `/messages/query` (REST)
+- Wait tool now supports all filter fields for WebSocket
+- All filters are optional; simple use cases remain simple
+- Backward compatible with legacy GET usage 
