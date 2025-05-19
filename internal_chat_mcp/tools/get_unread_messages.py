@@ -3,6 +3,7 @@ from pydantic import Field, BaseModel, ConfigDict
 from ..interfaces.tool import Tool, BaseToolInput, ToolResponse
 import httpx
 import logging
+import os
 
 
 class MessageFilter(BaseModel):
@@ -21,7 +22,7 @@ class MessageFilter(BaseModel):
 class GetUnreadMessagesInput(BaseToolInput):
     team_id: str = Field(..., description="Team ID to fetch messages for")
     backend_host: str = Field(
-        default="localhost:8000",
+        default=os.getenv("BACKEND_HOST", "localhost:8000"),
         description="Backend host and port (default: localhost:8000)",
     )
     filters: Optional[MessageFilter] = Field(

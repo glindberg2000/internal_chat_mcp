@@ -4,6 +4,7 @@ from ..interfaces.tool import Tool, BaseToolInput, ToolResponse
 import asyncio
 import websockets
 import json
+import os
 
 
 class SendMessageInput(BaseToolInput):
@@ -11,7 +12,7 @@ class SendMessageInput(BaseToolInput):
     user: str = Field(..., description="User sending the message")
     message: str = Field(..., description="Message content")
     backend_host: str = Field(
-        default="localhost:8000",
+        default=os.getenv("BACKEND_HOST", "localhost:8000"),
         description="Backend host and port (default: localhost:8000)",
     )
 
