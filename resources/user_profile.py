@@ -1,0 +1,24 @@
+"""User Profile resource implementation."""
+from datetime import datetime
+
+from ..interfaces.resource import Resource
+
+
+class UserProfileResource(Resource):
+    """A resource that provides user profile information based on user ID."""
+    name = "User Profile Resource"
+    description = "Provides user profile information for a given user ID"
+    uri = "users://{user_id}/profile"
+    mime_type = "text/plain"
+
+    async def read(self, user_id: str = "unknown") -> str:
+        """Read the user profile resource.
+
+        Args:
+            user_id: The ID of the user to get profile information for
+        """
+        # Create the response message
+        message = f"User Profile for user {user_id}\nName: User {user_id}\nEmail: user{user_id}@example.com\nJoined: {datetime.now().strftime('%Y-%m-%d')}"
+
+        # Return the formatted response
+        return message

@@ -1,0 +1,20 @@
+"""Hello World resource implementation."""
+from datetime import datetime
+
+from ..interfaces.resource import Resource
+
+
+class HelloWorldResource(Resource):
+    """A simple Hello World resource to demonstrate the MCP server functionality."""
+    name = "Hello World Resource"
+    description = "A simple resource that provides a hello world message"
+    uri = "hello://world"
+    mime_type = "text/plain"
+
+    async def read(self) -> str:
+        """Read the hello world resource."""
+        # Create the response message
+        message = f"Hello from the HelloWorldResource! Current time: {datetime.now().isoformat()}"
+
+        # Return the formatted response
+        return message
