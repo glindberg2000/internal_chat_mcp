@@ -1,4 +1,4 @@
-from typing import Optional, Dict, Any, List
+from typing import Optional, Dict, Any, List, Union
 from pydantic import Field, BaseModel, ConfigDict
 from ..interfaces.tool import Tool, BaseToolInput, ToolResponse
 import asyncio
@@ -27,8 +27,8 @@ class WaitForMessageInput(BaseToolInput):
         "host.docker.internal:8000",
         description="Backend host and port (default: host.docker.internal:8000)",
     )
-    filters: Optional[MessageFilter] = Field(
-        None, description="Advanced message filter (all fields optional)"
+    from_user: Optional[str] = Field(
+        None, description="Only wait for messages from this user"
     )
     timeout: int = Field(
         default=30, description="Timeout in seconds to wait for a message"
@@ -61,7 +61,6 @@ class WaitForMessageTool(Tool):
 
     async def execute(self, input_data: WaitForMessageInput) -> ToolResponse:
         ws_url = f"ws://{input_data.backend_host}/ws/{input_data.team_id}"
-        filter = input_data.filters or MessageFilter()
         try:
             async with websockets.connect(ws_url) as websocket:
                 try:
@@ -70,23 +69,13 @@ class WaitForMessageTool(Tool):
                             websocket.recv(), timeout=input_data.timeout
                         )
                         msg = json.loads(msg_raw)
-                        # Apply filter fields
-                        if filter.from_user and msg.get("user") != filter.from_user:
-                            continue
-                        if filter.mention_only and "@" not in msg.get("message", ""):
-                            continue
-                        if filter.content_regex and not re.search(
-                            filter.content_regex, msg.get("message", "")
-                        ):
-                            continue
+                        # Apply flat filter fields
                         if (
-                            filter.channels
-                            and msg.get("channel", "general") not in filter.channels
+                            input_data.from_user
+                            and msg.get("user") != input_data.from_user
                         ):
                             continue
-                        if filter.dm_only and msg.get("channel") is not None:
-                            continue
-                        # Add more filter logic as needed
+                        # Add more flat filter logic here as needed
                         output = WaitForMessageOutput(
                             id=None,  # Not available from WS, unless backend echoes
                             user=msg.get("user"),
