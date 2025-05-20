@@ -101,6 +101,9 @@ class GetUnreadMessagesTool(Tool):
                     filters_obj = MessageFilter()
             else:
                 filters_obj = input_data.filters
+            # Ensure user is included in filters if sender is present
+            if input_data.sender and not filters_obj.user:
+                filters_obj.user = input_data.sender
             query_url = f"{url}/query"
             payload = filters_obj.model_dump()
             print(f"[DEBUG] POST {query_url} | payload={payload}")
@@ -114,12 +117,22 @@ class GetUnreadMessagesTool(Tool):
             return ToolResponse.from_model(output)
         else:
             params = {}
+            # Determine user for GET: prefer filters.user, then sender
+            user_param = None
+            if input_data.sender:
+                user_param = input_data.sender
+            elif input_data.filters and getattr(input_data.filters, "user", None):
+                user_param = input_data.filters.user
+            if user_param:
+                params["user"] = user_param
+            else:
+                raise ValueError(
+                    "A 'user' parameter is required for GET unread messages."
+                )
             if input_data.since_message_id is not None:
                 params["since_message_id"] = self.coerce_int(
                     input_data.since_message_id
                 )
-            if input_data.sender:
-                params["sender"] = input_data.sender
             if input_data.limit is not None:
                 params["limit"] = self.coerce_int(input_data.limit)
             if input_data.mention_only is not None:
