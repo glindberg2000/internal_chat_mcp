@@ -24,8 +24,8 @@ class MessageFilter(BaseModel):
 class WaitForMessageInput(BaseToolInput):
     team_id: str = Field(..., description="Team ID to wait for a message in")
     backend_host: str = Field(
-        default=os.getenv("BACKEND_HOST", "localhost:8000"),
-        description="Backend host and port (default: localhost:8000)",
+        "host.docker.internal:8000",
+        description="Backend host and port (default: host.docker.internal:8000)",
     )
     filters: Optional[MessageFilter] = Field(
         None, description="Advanced message filter (all fields optional)"

@@ -12,8 +12,8 @@ class SendMessageInput(BaseToolInput):
     user: str = Field(..., description="User sending the message")
     message: str = Field(..., description="Message content")
     backend_host: str = Field(
-        default=os.getenv("BACKEND_HOST", "localhost:8000"),
-        description="Backend host and port (default: localhost:8000)",
+        "host.docker.internal:8000",
+        description="Backend host and port (default: host.docker.internal:8000)",
     )
 
 
