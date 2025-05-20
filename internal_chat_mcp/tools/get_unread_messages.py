@@ -33,7 +33,9 @@ class GetUnreadMessagesInput(BaseToolInput):
         None, description="Only messages with id > since_message_id"
     )
     sender: Optional[str] = Field(None, description="Only messages from this user")
-    limit: int = Field(default=20, description="Max number of messages to return")
+    limit: Optional[int] = Field(
+        default=20, description="Max number of messages to return"
+    )
     mention_only: Optional[bool] = Field(
         False, description="Only messages containing '@'"
     )
@@ -71,12 +73,36 @@ class GetUnreadMessagesTool(Tool):
             "output": self.output_model.model_json_schema(),
         }
 
+    def coerce_bool(self, val):
+        if isinstance(val, bool):
+            return val
+        if isinstance(val, str):
+            return val.lower() == "true"
+        return False
+
+    def coerce_int(self, val):
+        if isinstance(val, int):
+            return val
+        if isinstance(val, str) and val.isdigit():
+            return int(val)
+        return None
+
     async def execute(self, input_data: GetUnreadMessagesInput) -> ToolResponse:
         url = f"http://{input_data.backend_host}/api/team/{input_data.team_id}/messages"
         # Always use POST /messages/query if filters are provided
         if input_data.filters:
+            # If filters is a string (bad agent), try to parse it
+            if isinstance(input_data.filters, str):
+                import json as _json
+
+                try:
+                    filters_obj = MessageFilter(**_json.loads(input_data.filters))
+                except Exception:
+                    filters_obj = MessageFilter()
+            else:
+                filters_obj = input_data.filters
             query_url = f"{url}/query"
-            payload = input_data.filters.model_dump()
+            payload = filters_obj.model_dump()
             print(f"[DEBUG] POST {query_url} | payload={payload}")
             async with httpx.AsyncClient() as client:
                 resp = await client.post(query_url, json=payload)
@@ -89,15 +115,19 @@ class GetUnreadMessagesTool(Tool):
         else:
             params = {}
             if input_data.since_message_id is not None:
-                params["since_message_id"] = input_data.since_message_id
+                params["since_message_id"] = self.coerce_int(
+                    input_data.since_message_id
+                )
             if input_data.sender:
                 params["sender"] = input_data.sender
-            if input_data.limit:
-                params["limit"] = input_data.limit
-            if input_data.mention_only:
-                params["mention_only"] = str(input_data.mention_only).lower()
-            if input_data.dm_only:
-                params["dm_only"] = str(input_data.dm_only).lower()
+            if input_data.limit is not None:
+                params["limit"] = self.coerce_int(input_data.limit)
+            if input_data.mention_only is not None:
+                params["mention_only"] = str(
+                    self.coerce_bool(input_data.mention_only)
+                ).lower()
+            if input_data.dm_only is not None:
+                params["dm_only"] = str(self.coerce_bool(input_data.dm_only)).lower()
             if input_data.content_regex:
                 params["content_regex"] = input_data.content_regex
             print(f"[DEBUG] GET {url} | params={params}")
