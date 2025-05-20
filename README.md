@@ -267,4 +267,48 @@ export USER=myuser
 python test_get_unread_messages.py
 ```
 
-**This script is the recommended way to verify that your MCP tool and backend are communicating correctly in any environment.** 
+**This script is the recommended way to verify that your MCP tool and backend are communicating correctly in any environment.**
+
+## WaitForMessage Tool Usage
+
+The WaitForMessage tool allows you to wait for a message matching simple criteria on the internal team chat (WebSocket).
+
+### Supported Filters (as top-level fields):
+- `from_user` (optional): Only wait for messages from this user. Defaults to the value of the `INTERNAL_CHAT_USER` environment variable if not set.
+- `mention_only` (optional, bool): Only wait for messages that mention the user (as set in `INTERNAL_CHAT_USER`). Defaults to `False`.
+- `timeout` (optional, int): Timeout in seconds to wait for a message. Defaults to 30.
+
+### Example Usage
+
+Wait for a message from a specific user:
+```json
+{
+  "team_id": "t24",
+  "from_user": "greg",
+  "timeout": 30
+}
+```
+
+Wait for a message that mentions the current user:
+```json
+{
+  "team_id": "t24",
+  "mention_only": true,
+  "timeout": 30
+}
+```
+
+Wait for a message from a specific user that also mentions you:
+```json
+{
+  "team_id": "t24",
+  "from_user": "greg",
+  "mention_only": true,
+  "timeout": 30
+}
+```
+
+### Notes
+- Only the above filters are supported. Do not use a `filters` object or any other nested structure.
+- If neither `from_user` nor `mention_only` is set, the tool will wait for any message.
+- The tool is designed for maximum compatibility with MCP, Windsurf, Cursor, and public agent platforms. 

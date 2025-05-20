@@ -28,7 +28,12 @@ class WaitForMessageInput(BaseToolInput):
         description="Backend host and port (default: host.docker.internal:8000)",
     )
     from_user: Optional[str] = Field(
-        None, description="Only wait for messages from this user"
+        None,
+        description="Only wait for messages from this user (defaults to INTERNAL_CHAT_USER if not set)",
+    )
+    mention_only: Optional[bool] = Field(
+        False,
+        description="Only wait for messages that mention the user (INTERNAL_CHAT_USER)",
     )
     timeout: int = Field(
         default=30, description="Timeout in seconds to wait for a message"
@@ -61,6 +66,9 @@ class WaitForMessageTool(Tool):
 
     async def execute(self, input_data: WaitForMessageInput) -> ToolResponse:
         ws_url = f"ws://{input_data.backend_host}/ws/{input_data.team_id}"
+        # Determine user to filter by
+        user_to_match = input_data.from_user or os.getenv("INTERNAL_CHAT_USER")
+        mention_name = os.getenv("INTERNAL_CHAT_USER")
         try:
             async with websockets.connect(ws_url) as websocket:
                 try:
@@ -69,18 +77,18 @@ class WaitForMessageTool(Tool):
                             websocket.recv(), timeout=input_data.timeout
                         )
                         msg = json.loads(msg_raw)
-                        # Apply flat filter fields
-                        if (
-                            input_data.from_user
-                            and msg.get("user") != input_data.from_user
-                        ):
+                        # Filter by user if set
+                        if user_to_match and msg.get("user") != user_to_match:
                             continue
-                        # Add more flat filter logic here as needed
+                        # Filter by mention if set
+                        if input_data.mention_only and mention_name:
+                            if mention_name not in msg.get("message", ""):
+                                continue
                         output = WaitForMessageOutput(
-                            id=None,  # Not available from WS, unless backend echoes
+                            id=None,
                             user=msg.get("user"),
                             message=msg.get("message"),
-                            timestamp=None,  # Not available from WS, unless backend echoes
+                            timestamp=None,
                             channel=msg.get("channel"),
                             status="success",
                         )
