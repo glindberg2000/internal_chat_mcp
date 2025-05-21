@@ -88,7 +88,10 @@ class GetUnreadMessagesTool(Tool):
         return None
 
     async def execute(self, input_data: GetUnreadMessagesInput) -> ToolResponse:
-        url = f"http://{input_data.backend_host}/api/team/{input_data.team_id}/messages"
+        # Always use BACKEND_HOST env var if set
+        backend_host = os.environ.get("BACKEND_HOST", input_data.backend_host)
+        print(f"[DEBUG] Using backend_host: {backend_host}")
+        url = f"http://{backend_host}/api/team/{input_data.team_id}/messages"
         # Always use POST /messages/query if filters are provided
         if input_data.filters:
             # If filters is a string (bad agent), try to parse it
@@ -104,6 +107,10 @@ class GetUnreadMessagesTool(Tool):
             # Ensure user is included in filters if sender is present
             if input_data.sender and not filters_obj.user:
                 filters_obj.user = input_data.sender
+            # If still no user, use env var
+            if not filters_obj.user:
+                filters_obj.user = os.environ.get("INTERNAL_CHAT_USER")
+            print(f"[DEBUG] Sending user param in filters: {filters_obj.user}")
             query_url = f"{url}/query"
             payload = filters_obj.model_dump()
             print(f"[DEBUG] POST {query_url} | payload={payload}")
@@ -117,18 +124,19 @@ class GetUnreadMessagesTool(Tool):
             return ToolResponse.from_model(output)
         else:
             params = {}
-            # Determine user for GET: prefer filters.user, then sender
+            # Only filter by user if provided
             user_param = None
             if input_data.sender:
                 user_param = input_data.sender
             elif input_data.filters and getattr(input_data.filters, "user", None):
                 user_param = input_data.filters.user
+            # If still no user, use env var
+            if not user_param:
+                user_param = os.environ.get("INTERNAL_CHAT_USER")
+            print(f"[DEBUG] Sending user param in GET: {user_param}")
             if user_param:
                 params["user"] = user_param
-            else:
-                raise ValueError(
-                    "A 'user' parameter is required for GET unread messages."
-                )
+            # If no user param, do not raise an error—fetch all unread messages for the team/channel
             if input_data.since_message_id is not None:
                 params["since_message_id"] = self.coerce_int(
                     input_data.since_message_id

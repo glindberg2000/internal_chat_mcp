@@ -312,3 +312,58 @@ Wait for a message from a specific user that also mentions you:
 - Only the above filters are supported. Do not use a `filters` object or any other nested structure.
 - If neither `from_user` nor `mention_only` is set, the tool will wait for any message.
 - The tool is designed for maximum compatibility with MCP, Windsurf, Cursor, and public agent platforms. 
+
+# What's New (May 2025)
+
+- **Robust user context:** All tools now use `INTERNAL_CHAT_USER` from config/env by default for user context and filtering.
+- **WaitForMessageTool filtering:**
+  - No filters: returns the first message received.
+  - `from_user`: only returns messages from that user.
+  - `mention_only`: only returns messages that mention the configured user (robust regex).
+  - Both: both conditions must be true.
+- **SendMessageTool reply_to_user:**
+  - If `reply_to_user` is set, the message will automatically mention that user unless already present.
+  - This ensures replies always notify the intended recipient, matching modern chat UX.
+- **Debugging:**
+  - All debug output for WaitForMessageTool is written to `/tmp/wait_for_message_debug.log` for troubleshooting.
+
+## Usage Examples
+
+### Wait for any message
+```python
+result = WaitForMessageTool().execute(WaitForMessageInput(team_id="t24", timeout=30))
+```
+
+### Wait for a mention
+```python
+result = WaitForMessageTool().execute(WaitForMessageInput(team_id="t24", mention_only=True, timeout=30))
+```
+
+### Wait for a message from a specific user
+```python
+result = WaitForMessageTool().execute(WaitForMessageInput(team_id="t24", from_user="You", timeout=30))
+```
+
+### Send a reply that always mentions the sender
+```python
+SendMessageTool().execute(SendMessageInput(
+    team_id="t24",
+    user="greg",
+    message="Thanks for your message!",
+    reply_to_user="You"
+))
+# This will send: "@You Thanks for your message!"
+```
+
+### Mention-based workflow
+- Wait for a mention, extract the sender, and reply mentioning them back:
+```python
+wait_result = WaitForMessageTool().execute(WaitForMessageInput(team_id="t24", mention_only=True, timeout=30))
+sender = wait_result.user
+SendMessageTool().execute(SendMessageInput(
+    team_id="t24",
+    user="greg",
+    message="Got your mention!",
+    reply_to_user=sender
+))
+``` 

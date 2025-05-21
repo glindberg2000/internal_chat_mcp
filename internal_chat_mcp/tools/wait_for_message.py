@@ -8,6 +8,14 @@ import re
 import os
 
 
+def log_debug(msg):
+    with open("/tmp/wait_for_message_debug.log", "a") as f:
+        f.write(msg + "\n")
+
+
+log_debug("[DEBUG] wait_for_message.py loaded")
+
+
 class MessageFilter(BaseModel):
     user: Optional[str] = None
     channels: Optional[List[str]] = None
@@ -65,10 +73,23 @@ class WaitForMessageTool(Tool):
         }
 
     async def execute(self, input_data: WaitForMessageInput) -> ToolResponse:
-        ws_url = f"ws://{input_data.backend_host}/ws/{input_data.team_id}"
-        # Determine user to filter by
-        user_to_match = input_data.from_user or os.getenv("INTERNAL_CHAT_USER")
-        mention_name = os.getenv("INTERNAL_CHAT_USER")
+        log_debug(f"[DEBUG] WaitForMessageTool.execute called with input: {input_data}")
+        backend_host = os.environ.get("BACKEND_HOST", input_data.backend_host)
+        log_debug(f"[DEBUG] Using backend_host: {backend_host}")
+        ws_url = f"ws://{backend_host}/ws/{input_data.team_id}"
+        from_user = input_data.from_user
+        mention_only = input_data.mention_only
+        if isinstance(mention_only, str):
+            mention_only = mention_only.lower() == "true"
+        mention_user = os.environ.get("INTERNAL_CHAT_USER")
+        mention_pattern = None
+        if mention_only and mention_user:
+            import re
+
+            mention_pattern = re.compile(
+                rf"(?:^|[^\\w])@{re.escape(mention_user)}(?:[^\\w]|$)", re.IGNORECASE
+            )
+            log_debug(f"[DEBUG] Using mention regex: {mention_pattern.pattern}")
         try:
             async with websockets.connect(ws_url) as websocket:
                 try:
@@ -77,13 +98,31 @@ class WaitForMessageTool(Tool):
                             websocket.recv(), timeout=input_data.timeout
                         )
                         msg = json.loads(msg_raw)
-                        # Filter by user if set
-                        if user_to_match and msg.get("user") != user_to_match:
-                            continue
-                        # Filter by mention if set
-                        if input_data.mention_only and mention_name:
-                            if mention_name not in msg.get("message", ""):
+                        log_debug(f"[DEBUG] Received message: {msg}")
+                        # Apply from_user filter if set
+                        if from_user:
+                            if msg.get("user") != from_user:
+                                log_debug(
+                                    f"[DEBUG] Skipping message from user: {msg.get('user')} (wanted: {from_user})"
+                                )
                                 continue
+                        # Apply mention filter if set
+                        if mention_pattern:
+                            message_text = msg.get("message", "")
+                            log_debug(
+                                f"[DEBUG] Checking message for mention: {repr(message_text)}"
+                            )
+                            if not mention_pattern.search(message_text):
+                                log_debug(
+                                    f"[DEBUG] No mention match for user {mention_user}"
+                                )
+                                continue
+                            else:
+                                log_debug(
+                                    f"[DEBUG] Mention match for user {mention_user}"
+                                )
+                        # If no filters or all filters pass, return the message
+                        log_debug(f"[DEBUG] Accepting message: {msg}")
                         output = WaitForMessageOutput(
                             id=None,
                             user=msg.get("user"),
@@ -99,5 +138,6 @@ class WaitForMessageTool(Tool):
                     )
                     return ToolResponse.from_model(output)
         except Exception as e:
+            log_debug(f"[DEBUG] Exception in WaitForMessageTool: {e}")
             output = WaitForMessageOutput(status="error", detail=str(e))
             return ToolResponse.from_model(output)

@@ -15,6 +15,10 @@ class SendMessageInput(BaseToolInput):
         "host.docker.internal:8000",
         description="Backend host and port (default: host.docker.internal:8000)",
     )
+    reply_to_user: str = Field(
+        None,
+        description="If set, automatically mention this user in the message if not already present.",
+    )
 
 
 class SendMessageOutput(BaseModel):
@@ -37,12 +41,21 @@ class SendMessageTool(Tool):
         }
 
     async def execute(self, input_data: SendMessageInput) -> ToolResponse:
-        ws_url = f"ws://{input_data.backend_host}/ws/{input_data.team_id}"
+        # Always use BACKEND_HOST env var if set
+        backend_host = os.environ.get("BACKEND_HOST", input_data.backend_host)
+        # Use INTERNAL_CHAT_USER if user not provided
+        user = input_data.user or os.environ.get("INTERNAL_CHAT_USER")
+        # Auto-mention reply_to_user if set and not already mentioned
+        message = input_data.message
+        if input_data.reply_to_user:
+            mention = f"@{input_data.reply_to_user}"
+            if mention.lower() not in message.lower():
+                message = f"{mention} {message}"
+        print(f"[DEBUG] Sending user param in SendMessage: {user}")
+        ws_url = f"ws://{backend_host}/ws/{input_data.team_id}"
         try:
             async with websockets.connect(ws_url) as websocket:
-                await websocket.send(
-                    json.dumps({"user": input_data.user, "message": input_data.message})
-                )
+                await websocket.send(json.dumps({"user": user, "message": message}))
                 # Optionally, wait for an echo or confirmation
                 # response = await websocket.recv()
             output = SendMessageOutput(status="success")
