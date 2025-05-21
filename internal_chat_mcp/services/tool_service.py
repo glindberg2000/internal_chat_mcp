@@ -10,6 +10,7 @@ from internal_chat_mcp.interfaces.tool import (
     ToolContent,
 )
 from pydantic import Field
+import time
 
 
 class ToolService:
@@ -55,7 +56,29 @@ class ToolService:
         input_model = tool.input_model(**input_data)
 
         # Execute the tool with validated input
-        return await tool.execute(input_model)
+        response = await tool.execute(input_model)
+
+        # If this is WaitForMessageTool and a message was received, delay before returning
+        if tool_name == "WaitForMessage":
+            # Check if a message was received (not just a timeout)
+            try:
+                msg = (
+                    response.content[0].json_data
+                    if response.content and hasattr(response.content[0], "json_data")
+                    else None
+                )
+                if msg and msg.get("status") == "success" and msg.get("message"):
+                    with open("/tmp/wait_for_message_debug.log", "a") as f:
+                        f.write(
+                            "[DEBUG] MCP tool_service.py: Delaying 1.5s after receiving message before delivering to agent\n"
+                        )
+                    time.sleep(1.5)
+            except Exception as e:
+                with open("/tmp/wait_for_message_debug.log", "a") as f:
+                    f.write(
+                        f"[DEBUG] MCP tool_service.py: Exception in delay logic: {e}\n"
+                    )
+        return response
 
     def _process_tool_content(self, content: ToolContent) -> Any:
         """Process a ToolContent object based on its type.
