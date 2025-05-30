@@ -15,7 +15,7 @@ class SendMessageInput(BaseToolInput):
         "host.docker.internal:8000",
         description="Backend host and port (default: host.docker.internal:8000)",
     )
-    reply_to_user: str = Field(
+    reply_to_user: Optional[str] = Field(
         None,
         description="If set, automatically mention this user in the message if not already present.",
     )
@@ -47,8 +47,9 @@ class SendMessageTool(Tool):
         user = input_data.user or os.environ.get("INTERNAL_CHAT_USER")
         # Auto-mention reply_to_user if set and not already mentioned
         message = input_data.message
-        if input_data.reply_to_user:
-            mention = f"@{input_data.reply_to_user}"
+        reply_to_user = input_data.reply_to_user or ""
+        if reply_to_user:
+            mention = f"@{reply_to_user}"
             if mention.lower() not in message.lower():
                 message = f"{mention} {message}"
         print(f"[DEBUG] Sending user param in SendMessage: {user}")
