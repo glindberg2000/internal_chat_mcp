@@ -12,6 +12,7 @@ from internal_chat_mcp.tools import (
     SendMessageTool,
     GetUnreadMessagesTool,
     WaitForMessageTool,
+    GetRecentMessagesTool,
 )
 
 # from internal_chat_mcp.resources import HelloWorldResource, UserProfileResource
@@ -23,6 +24,7 @@ def get_available_tools() -> List[Tool]:
         SendMessageTool(),
         GetUnreadMessagesTool(),
         WaitForMessageTool(),
+        GetRecentMessagesTool(),
     ]
 
 
