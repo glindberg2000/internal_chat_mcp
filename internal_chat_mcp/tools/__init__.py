@@ -9,6 +9,8 @@
 from .send_message import SendMessageTool
 from .get_unread_messages import GetUnreadMessagesTool
 from .wait_for_message import WaitForMessageTool
+from .get_recent_messages import GetRecentMessagesTool
+from .get_version import GetVersionTool
 
 # Import additional tools you create here
 
@@ -22,5 +24,7 @@ __all__ = [
     "SendMessageTool",
     "GetUnreadMessagesTool",
     "WaitForMessageTool",
+    "GetRecentMessagesTool",
+    "GetVersionTool",
 ]
 # Add additional tools to the __all__ list as you create them

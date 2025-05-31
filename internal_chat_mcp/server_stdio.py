@@ -13,9 +13,11 @@ from internal_chat_mcp.tools import (
     GetUnreadMessagesTool,
     WaitForMessageTool,
     GetRecentMessagesTool,
+    GetVersionTool,
 )
 
 # from internal_chat_mcp.resources import HelloWorldResource, UserProfileResource
+from internal_chat_mcp import __version__
 
 
 def get_available_tools() -> List[Tool]:
@@ -25,6 +27,7 @@ def get_available_tools() -> List[Tool]:
         GetUnreadMessagesTool(),
         WaitForMessageTool(),
         GetRecentMessagesTool(),
+        GetVersionTool(),
     ]
 
 
@@ -38,6 +41,7 @@ def get_available_tools() -> List[Tool]:
 
 def main():
     """Entry point for the server."""
+    print(f"[internal_chat_mcp] MCP Server starting, version {__version__}")
     mcp = FastMCP("internal_chat_mcp")
     tool_service = ToolService()
     resource_service = ResourceService()
