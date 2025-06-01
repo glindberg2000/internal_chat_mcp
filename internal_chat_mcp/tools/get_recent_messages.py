@@ -3,6 +3,7 @@ from pydantic import Field, BaseModel
 from ..interfaces.tool import Tool, BaseToolInput, ToolResponse
 import httpx
 import os
+import logging
 
 
 class GetRecentMessagesInput(BaseToolInput):
@@ -44,10 +45,12 @@ class GetRecentMessagesTool(Tool):
         backend_host = os.environ.get("BACKEND_HOST", input_data.backend_host)
         url = f"http://{backend_host}/api/team/{input_data.team_id}/messages"
         params = {"limit": input_data.limit or 20}
-        print(f"[DEBUG] GetRecentMessagesTool GET {url} | params={params}")
+        logging.debug(f"[DEBUG] GetRecentMessagesTool GET {url} | params={params}")
         async with httpx.AsyncClient() as client:
             resp = await client.get(url, params=params)
-            print(f"[DEBUG] Response status: {resp.status_code}, body: {resp.text}")
+            logging.debug(
+                f"[DEBUG] Response status: {resp.status_code}, body: {resp.text}"
+            )
             resp.raise_for_status()
             data = resp.json()
             messages = [MessageModel(**m) for m in data.get("messages", [])]

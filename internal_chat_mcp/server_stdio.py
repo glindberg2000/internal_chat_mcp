@@ -1,5 +1,14 @@
 """internal_chat_mcp MCP Server implementation."""
 
+import logging
+import sys
+
+logging.basicConfig(
+    level=logging.INFO,  # Change to DEBUG for more verbosity
+    format="[%(levelname)s] %(message)s",
+    stream=sys.stderr,
+)
+
 from mcp.server.fastmcp import FastMCP
 from typing import List, Dict, Any
 
@@ -41,7 +50,7 @@ def get_available_tools() -> List[Tool]:
 
 def main():
     """Entry point for the server."""
-    print(f"[internal_chat_mcp] MCP Server starting, version {__version__}")
+    logging.info(f"[internal_chat_mcp] MCP Server starting, version {__version__}")
     mcp = FastMCP("internal_chat_mcp")
     tool_service = ToolService()
     resource_service = ResourceService()

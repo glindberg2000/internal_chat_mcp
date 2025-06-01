@@ -5,6 +5,7 @@ import asyncio
 import websockets
 import json
 import os
+import logging
 
 
 class SendMessageInput(BaseToolInput):
@@ -52,7 +53,7 @@ class SendMessageTool(Tool):
             mention = f"@{reply_to_user}"
             if mention.lower() not in message.lower():
                 message = f"{mention} {message}"
-        print(f"[DEBUG] Sending user param in SendMessage: {user}")
+        logging.debug(f"[DEBUG] Sending user param in SendMessage: {user}")
         ws_url = f"ws://{backend_host}/ws/{input_data.team_id}"
         try:
             async with websockets.connect(ws_url) as websocket:

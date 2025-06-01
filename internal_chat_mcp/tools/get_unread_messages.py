@@ -90,7 +90,7 @@ class GetUnreadMessagesTool(Tool):
     async def execute(self, input_data: GetUnreadMessagesInput) -> ToolResponse:
         # Always use BACKEND_HOST env var if set
         backend_host = os.environ.get("BACKEND_HOST", input_data.backend_host)
-        print(f"[DEBUG] Using backend_host: {backend_host}")
+        logging.debug(f"[DEBUG] Using backend_host: {backend_host}")
         url = f"http://{backend_host}/api/team/{input_data.team_id}/messages"
         # Always use POST /messages/query if filters are provided
         if input_data.filters:
@@ -110,13 +110,15 @@ class GetUnreadMessagesTool(Tool):
             # If still no user, use env var
             if not filters_obj.user:
                 filters_obj.user = os.environ.get("INTERNAL_CHAT_USER")
-            print(f"[DEBUG] Sending user param in filters: {filters_obj.user}")
+            logging.debug(f"[DEBUG] Sending user param in filters: {filters_obj.user}")
             query_url = f"{url}/query"
             payload = filters_obj.model_dump()
-            print(f"[DEBUG] POST {query_url} | payload={payload}")
+            logging.debug(f"[DEBUG] POST {query_url} | payload={payload}")
             async with httpx.AsyncClient() as client:
                 resp = await client.post(query_url, json=payload)
-                print(f"[DEBUG] Response status: {resp.status_code}, body: {resp.text}")
+                logging.debug(
+                    f"[DEBUG] Response status: {resp.status_code}, body: {resp.text}"
+                )
                 resp.raise_for_status()
                 data = resp.json()
                 messages = [MessageModel(**m) for m in data.get("messages", [])]
@@ -133,7 +135,7 @@ class GetUnreadMessagesTool(Tool):
             # If still no user, use env var
             if not user_param:
                 user_param = os.environ.get("INTERNAL_CHAT_USER")
-            print(f"[DEBUG] Sending user param in GET: {user_param}")
+            logging.debug(f"[DEBUG] Sending user param in GET: {user_param}")
             if user_param:
                 params["user"] = user_param
             # If no user param, do not raise an error—fetch all unread messages for the team/channel
@@ -151,10 +153,12 @@ class GetUnreadMessagesTool(Tool):
                 params["dm_only"] = str(self.coerce_bool(input_data.dm_only)).lower()
             if input_data.content_regex:
                 params["content_regex"] = input_data.content_regex
-            print(f"[DEBUG] GET {url} | params={params}")
+            logging.debug(f"[DEBUG] GET {url} | params={params}")
             async with httpx.AsyncClient() as client:
                 resp = await client.get(url, params=params)
-                print(f"[DEBUG] Response status: {resp.status_code}, body: {resp.text}")
+                logging.debug(
+                    f"[DEBUG] Response status: {resp.status_code}, body: {resp.text}"
+                )
                 resp.raise_for_status()
                 data = resp.json()
                 messages = [MessageModel(**m) for m in data.get("messages", [])]
