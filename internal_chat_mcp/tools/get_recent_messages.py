@@ -7,11 +7,6 @@ import logging
 
 
 class GetRecentMessagesInput(BaseToolInput):
-    team_id: str = Field(..., description="Team ID to fetch messages for")
-    backend_host: str = Field(
-        "host.docker.internal:8000",
-        description="Backend host and port (default: host.docker.internal:8000)",
-    )
     limit: Optional[int] = Field(20, description="Max number of messages to return")
 
 
@@ -29,7 +24,7 @@ class GetRecentMessagesOutput(BaseModel):
 
 class GetRecentMessagesTool(Tool):
     name = "GetRecentMessages"
-    description = "Fetch the most recent messages for a team from the internal chat backend (REST). Uses GET /api/team/<team>/messages?limit=N."
+    description = "Fetch the most recent messages for a team from the internal chat backend (REST). Team and backend host are determined by the MCP config/environment. Uses GET /api/team/<team>/messages?limit=N."
     input_model = GetRecentMessagesInput
     output_model = GetRecentMessagesOutput
 
@@ -42,8 +37,9 @@ class GetRecentMessagesTool(Tool):
         }
 
     async def execute(self, input_data: GetRecentMessagesInput) -> ToolResponse:
-        backend_host = os.environ.get("BACKEND_HOST", input_data.backend_host)
-        url = f"http://{backend_host}/api/team/{input_data.team_id}/messages"
+        backend_host = os.environ["BACKEND_HOST"]
+        team_id = os.environ["INTERNAL_CHAT_TEAM_ID"]
+        url = f"http://{backend_host}/api/team/{team_id}/messages"
         params = {"limit": input_data.limit or 20}
         logging.debug(f"[DEBUG] GetRecentMessagesTool GET {url} | params={params}")
         async with httpx.AsyncClient() as client:

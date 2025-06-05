@@ -9,13 +9,7 @@ import logging
 
 
 class SendMessageInput(BaseToolInput):
-    team_id: str = Field(..., description="Team ID to send the message to")
-    user: str = Field(..., description="User sending the message")
     message: str = Field(..., description="Message content")
-    backend_host: str = Field(
-        "host.docker.internal:8000",
-        description="Backend host and port (default: host.docker.internal:8000)",
-    )
     reply_to_user: Optional[str] = Field(
         None,
         description="If set, automatically mention this user in the message if not already present.",
@@ -29,7 +23,7 @@ class SendMessageOutput(BaseModel):
 
 class SendMessageTool(Tool):
     name = "SendMessage"
-    description = "Send a message to the internal team chat via WebSocket."
+    description = "Send a message to the internal team chat via WebSocket. Team, user, and backend host are determined by the MCP config/environment."
     input_model = SendMessageInput
     output_model = SendMessageOutput
 
@@ -42,11 +36,9 @@ class SendMessageTool(Tool):
         }
 
     async def execute(self, input_data: SendMessageInput) -> ToolResponse:
-        # Always use BACKEND_HOST env var if set
-        backend_host = os.environ.get("BACKEND_HOST", input_data.backend_host)
-        # Use INTERNAL_CHAT_USER if user not provided
-        user = input_data.user or os.environ.get("INTERNAL_CHAT_USER")
-        # Auto-mention reply_to_user if set and not already mentioned
+        backend_host = os.environ["BACKEND_HOST"]
+        user = os.environ["INTERNAL_CHAT_USER"]
+        team_id = os.environ["INTERNAL_CHAT_TEAM_ID"]
         message = input_data.message
         reply_to_user = input_data.reply_to_user or ""
         if reply_to_user:
@@ -54,12 +46,10 @@ class SendMessageTool(Tool):
             if mention.lower() not in message.lower():
                 message = f"{mention} {message}"
         logging.debug(f"[DEBUG] Sending user param in SendMessage: {user}")
-        ws_url = f"ws://{backend_host}/ws/{input_data.team_id}"
+        ws_url = f"ws://{backend_host}/ws/{team_id}"
         try:
             async with websockets.connect(ws_url) as websocket:
                 await websocket.send(json.dumps({"user": user, "message": message}))
-                # Optionally, wait for an echo or confirmation
-                # response = await websocket.recv()
             output = SendMessageOutput(status="success")
         except Exception as e:
             output = SendMessageOutput(status="error", detail=str(e))

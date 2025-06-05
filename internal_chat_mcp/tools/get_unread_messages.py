@@ -20,19 +20,12 @@ class MessageFilter(BaseModel):
 
 
 class GetUnreadMessagesInput(BaseToolInput):
-    team_id: str = Field(..., description="Team ID to fetch messages for")
-    backend_host: str = Field(
-        "host.docker.internal:8000",
-        description="Backend host and port (default: host.docker.internal:8000)",
-    )
     filters: Optional[MessageFilter] = Field(
         None, description="Advanced message filter (all fields optional)"
     )
-    # Legacy fields for backward compatibility
     since_message_id: Optional[int] = Field(
         None, description="Only messages with id > since_message_id"
     )
-    sender: Optional[str] = Field(None, description="Only messages from this user")
     limit: Optional[int] = Field(
         default=20, description="Max number of messages to return"
     )
@@ -61,7 +54,7 @@ class GetUnreadMessagesOutput(BaseModel):
 
 class GetUnreadMessagesTool(Tool):
     name = "GetUnreadMessages"
-    description = "Fetch unread messages for a team from the internal chat backend (REST). Supports advanced filters via POST /messages/query."
+    description = "Fetch unread messages for a team from the internal chat backend (REST). Team, user, and backend host are determined by the MCP config/environment. Supports advanced filters via POST /messages/query."
     input_model = GetUnreadMessagesInput
     output_model = GetUnreadMessagesOutput
 
@@ -88,10 +81,10 @@ class GetUnreadMessagesTool(Tool):
         return None
 
     async def execute(self, input_data: GetUnreadMessagesInput) -> ToolResponse:
-        # Always use BACKEND_HOST env var if set
-        backend_host = os.environ.get("BACKEND_HOST", input_data.backend_host)
-        logging.debug(f"[DEBUG] Using backend_host: {backend_host}")
-        url = f"http://{backend_host}/api/team/{input_data.team_id}/messages"
+        backend_host = os.environ["BACKEND_HOST"]
+        team_id = os.environ["INTERNAL_CHAT_TEAM_ID"]
+        user = os.environ["INTERNAL_CHAT_USER"]
+        url = f"http://{backend_host}/api/team/{team_id}/messages"
         # Always use POST /messages/query if filters are provided
         if input_data.filters:
             # If filters is a string (bad agent), try to parse it
@@ -105,11 +98,11 @@ class GetUnreadMessagesTool(Tool):
             else:
                 filters_obj = input_data.filters
             # Ensure user is included in filters if sender is present
-            if input_data.sender and not filters_obj.user:
-                filters_obj.user = input_data.sender
+            if input_data.from_user and not filters_obj.user:
+                filters_obj.user = input_data.from_user
             # If still no user, use env var
             if not filters_obj.user:
-                filters_obj.user = os.environ.get("INTERNAL_CHAT_USER")
+                filters_obj.user = user
             logging.debug(f"[DEBUG] Sending user param in filters: {filters_obj.user}")
             query_url = f"{url}/query"
             payload = filters_obj.model_dump()
@@ -128,13 +121,13 @@ class GetUnreadMessagesTool(Tool):
             params = {}
             # Only filter by user if provided
             user_param = None
-            if input_data.sender:
-                user_param = input_data.sender
+            if input_data.from_user:
+                user_param = input_data.from_user
             elif input_data.filters and getattr(input_data.filters, "user", None):
                 user_param = input_data.filters.user
             # If still no user, use env var
             if not user_param:
-                user_param = os.environ.get("INTERNAL_CHAT_USER")
+                user_param = user
             logging.debug(f"[DEBUG] Sending user param in GET: {user_param}")
             if user_param:
                 params["user"] = user_param

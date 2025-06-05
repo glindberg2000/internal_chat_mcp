@@ -30,11 +30,6 @@ class MessageFilter(BaseModel):
 
 
 class WaitForMessageInput(BaseToolInput):
-    team_id: str = Field(..., description="Team ID to wait for a message in")
-    backend_host: str = Field(
-        "host.docker.internal:8000",
-        description="Backend host and port (default: host.docker.internal:8000)",
-    )
     from_user: Optional[str] = Field(
         None,
         description="Only wait for messages from this user (defaults to INTERNAL_CHAT_USER if not set)",
@@ -60,7 +55,7 @@ class WaitForMessageOutput(BaseModel):
 
 class WaitForMessageTool(Tool):
     name = "WaitForMessage"
-    description = "Wait for a message matching criteria on the internal team chat (WebSocket). Supports advanced filters."
+    description = "Wait for a message matching criteria on the internal team chat (WebSocket). Team and backend host are determined by the MCP config/environment. Supports advanced filters."
     input_model = WaitForMessageInput
     output_model = WaitForMessageOutput
 
@@ -74,10 +69,9 @@ class WaitForMessageTool(Tool):
 
     async def execute(self, input_data: WaitForMessageInput) -> ToolResponse:
         log_debug(f"[DEBUG] WaitForMessageTool.execute called with input: {input_data}")
-        backend_host = os.environ.get("BACKEND_HOST", input_data.backend_host)
-        log_debug(f"[DEBUG] Using backend_host: {backend_host}")
-        ws_url = f"ws://{backend_host}/ws/{input_data.team_id}"
-        from_user = input_data.from_user
+        backend_host = os.environ["BACKEND_HOST"]
+        team_id = os.environ["INTERNAL_CHAT_TEAM_ID"]
+        from_user = input_data.from_user or os.environ.get("INTERNAL_CHAT_USER")
         mention_only = input_data.mention_only
         if isinstance(mention_only, str):
             mention_only = mention_only.lower() == "true"
@@ -91,11 +85,13 @@ class WaitForMessageTool(Tool):
             )
             log_debug(f"[DEBUG] Using mention regex: {mention_pattern.pattern}")
         try:
+            ws_url = f"ws://{backend_host}/ws/{team_id}"
+            timeout = input_data.timeout
             async with websockets.connect(ws_url) as websocket:
                 try:
                     while True:
                         msg_raw = await asyncio.wait_for(
-                            websocket.recv(), timeout=input_data.timeout
+                            websocket.recv(), timeout=timeout
                         )
                         msg = json.loads(msg_raw)
                         log_debug(f"[DEBUG] Received message: {msg}")
