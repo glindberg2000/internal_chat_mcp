@@ -366,4 +366,29 @@ SendMessageTool().execute(SendMessageInput(
     message="Got your mention!",
     reply_to_user=sender
 ))
-``` 
+```
+
+### Tool Call Parameter Validation and 'from_user' Usage
+
+**Important:**
+- The `GetUnreadMessages` tool does **not** accept `from_user` as a top-level field. If you want to filter by sender, use `filters.user` instead.
+- Example (correct):
+  ```json
+  {
+    "filters": {"user": "Cline", "limit": 10}
+  }
+  ```
+- Example (incorrect):
+  ```json
+  {
+    "from_user": "Cline", "limit": 10
+  }
+  ```
+  This will be ignored or cause a warning in the logs.
+
+**Agent/Tool-Calling Guidance:**
+- Always validate tool call parameters against the tool's schema before calling.
+- Drop or remap any fields not in the schema (e.g., move `from_user` into `filters.user` if present).
+- If you see errors about invalid parameters, check the tool's schema and usage examples above.
+
+See the `GetUnreadMessagesInput` and `MessageFilter` docstrings for more details and examples. 

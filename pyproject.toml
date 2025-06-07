@@ -1,6 +1,6 @@
 [project]
 name = "internal_chat_mcp"
-version = "0.2.0"
+version = "0.2.4"
 description = "internal_chat_mcp MCP server"
 authors = [{ name = "Greg Lindberg", email = "greglindberg@gmail.com" }]
 requires-python = ">=3.8"
