@@ -51,17 +51,17 @@ async def main():
             backend_host = sys.argv[1]
         else:
             backend_host = "localhost:8000"
-
+    # Set env vars for the tool
+    os.environ["INTERNAL_CHAT_TEAM_ID"] = team_id
+    os.environ["INTERNAL_CHAT_USER"] = user
+    os.environ["BACKEND_HOST"] = backend_host
     print(
         f"--- Using backend_host: {backend_host} | team_id: {team_id} | user: {user} ---"
     )
     print("--- Sending test message ---")
     send_tool = SendMessageTool()
     send_input = SendMessageInput(
-        team_id=team_id,
-        user=user,
-        message="Test message from test_get_unread_messages.py",
-        backend_host=backend_host,
+        message="Test message from test_get_unread_messages.py"
     )
     try:
         send_result = await send_tool.execute(send_input)
@@ -73,11 +73,7 @@ async def main():
         "--- Fetching unread messages with filters (should use POST /messages/query) ---"
     )
     get_tool = GetUnreadMessagesTool()
-    get_input = GetUnreadMessagesInput(
-        team_id=team_id,
-        backend_host=backend_host,
-        filters=MessageFilter(user=user, limit=10),
-    )
+    get_input = GetUnreadMessagesInput(filters=MessageFilter(user=user, limit=10))
     try:
         get_result = await get_tool.execute(get_input)
         print("GetUnreadMessagesTool result:", get_result)

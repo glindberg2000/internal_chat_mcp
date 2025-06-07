@@ -7,6 +7,23 @@ import os
 
 
 class MessageFilter(BaseModel):
+    """
+    MessageFilter for advanced chat message queries.
+    Only use these fields inside the 'filters' object of GetUnreadMessagesInput.
+    Example:
+        filters = MessageFilter(user="Cline", limit=10)
+    Fields:
+        user: Only messages from this user
+        channels: List of channel names/IDs
+        dm_only: Only direct messages
+        mention_only: Only messages mentioning the user
+        content_regex: Only messages matching this regex
+        from_user: (legacy/alias) Only messages from this user
+        before/after: Message ID or timestamp range
+        sort: 'asc' or 'desc'
+        limit: Max number of messages
+    """
+
     user: Optional[str] = None
     channels: Optional[List[str]] = None
     dm_only: Optional[bool] = None
@@ -20,6 +37,20 @@ class MessageFilter(BaseModel):
 
 
 class GetUnreadMessagesInput(BaseToolInput):
+    """
+    Input for GetUnreadMessagesTool. Only use the fields defined here.
+    Example (fetch last 10 messages from user 'Cline'):
+        {
+            "filters": {"user": "Cline", "limit": 10}
+        }
+    Example (fetch last 5 messages mentioning you):
+        {
+            "mention_only": true,
+            "limit": 5
+        }
+    Do NOT use 'from_user' at the top level. Place it inside 'filters' if needed.
+    """
+
     filters: Optional[MessageFilter] = Field(
         None, description="Advanced message filter (all fields optional)"
     )
@@ -54,7 +85,15 @@ class GetUnreadMessagesOutput(BaseModel):
 
 class GetUnreadMessagesTool(Tool):
     name = "GetUnreadMessages"
-    description = "Fetch unread messages for a team from the internal chat backend (REST). Team, user, and backend host are determined by the MCP config/environment. Supports advanced filters via POST /messages/query."
+    description = (
+        "Fetch unread messages for a team from the internal chat backend (REST). "
+        "Team, user, and backend host are determined by the MCP config/environment. "
+        "Supports advanced filters via POST /messages/query.\n"
+        "\nUSAGE EXAMPLES:\n"
+        '- {"filters": {"user": "Cline", "limit": 10}}\n'
+        '- {"mention_only": true, "limit": 5}\n'
+        "\nDo NOT use 'from_user' at the top level. Place it inside 'filters' if needed."
+    )
     input_model = GetUnreadMessagesInput
     output_model = GetUnreadMessagesOutput
 
@@ -98,8 +137,8 @@ class GetUnreadMessagesTool(Tool):
             else:
                 filters_obj = input_data.filters
             # Ensure user is included in filters if sender is present
-            if input_data.from_user and not filters_obj.user:
-                filters_obj.user = input_data.from_user
+            # if input_data.from_user and not filters_obj.user:
+            #     filters_obj.user = input_data.from_user
             # If still no user, use env var
             if not filters_obj.user:
                 filters_obj.user = user
@@ -121,9 +160,9 @@ class GetUnreadMessagesTool(Tool):
             params = {}
             # Only filter by user if provided
             user_param = None
-            if input_data.from_user:
-                user_param = input_data.from_user
-            elif input_data.filters and getattr(input_data.filters, "user", None):
+            # if input_data.from_user:
+            #     user_param = input_data.from_user
+            if input_data.filters and getattr(input_data.filters, "user", None):
                 user_param = input_data.filters.user
             # If still no user, use env var
             if not user_param:
