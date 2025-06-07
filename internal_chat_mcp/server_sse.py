@@ -1,5 +1,7 @@
 """internal_chat_mcp MCP Server implementation with SSE transport."""
 
+print("=== DEBUG: server_sse.py loaded ===")
+
 from mcp.server.fastmcp import FastMCP
 from starlette.applications import Starlette
 from mcp.server.sse import SseServerTransport
@@ -23,6 +25,17 @@ from internal_chat_mcp.tools import (
 )
 
 # from internal_chat_mcp.resources import HelloWorldResource, UserProfileResource
+
+import internal_chat_mcp
+import logging
+
+# Set up logging to include version in every log line
+logging.basicConfig(
+    format=f"%(asctime)s [%(levelname)s] [v0.2.4] %(message)s",
+    level=logging.INFO,
+)
+
+logging.info(f"[internal_chat_mcp] MCP SSE Server starting, version 0.2.4")
 
 
 def get_available_tools() -> List[Tool]:

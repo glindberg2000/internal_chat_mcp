@@ -1,13 +1,19 @@
 """internal_chat_mcp MCP Server implementation."""
 
+__version__ = "0.2.4"
+
+print("=== DEBUG: server_stdio.py loaded ===")
+
 import logging
 import sys
 
+# Set up logging to include version in every log line
 logging.basicConfig(
-    level=logging.INFO,  # Change to DEBUG for more verbosity
-    format="[%(levelname)s] %(message)s",
-    stream=sys.stderr,
+    format=f"%(asctime)s [%(levelname)s] [v{__version__}] %(message)s",
+    level=logging.INFO,
 )
+
+logging.info(f"[internal_chat_mcp] MCP STDIO Server starting, version {__version__}")
 
 from mcp.server.fastmcp import FastMCP
 from typing import List, Dict, Any
