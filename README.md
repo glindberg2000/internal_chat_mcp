@@ -391,4 +391,111 @@ SendMessageTool().execute(SendMessageInput(
 - Drop or remap any fields not in the schema (e.g., move `from_user` into `filters.user` if present).
 - If you see errors about invalid parameters, check the tool's schema and usage examples above.
 
+See the `GetUnreadMessagesInput` and `MessageFilter` docstrings for more details and examples.
+
+## ⚠️ Important: Correct Usage of 'filters' Parameter
+
+When using the `GetUnreadMessagesTool`, the `filters` parameter **must be a dictionary/object**, not a string or stringified JSON.
+
+**Correct usage:**
+```json
+{
+  "filters": { "limit": 10 }
+}
+```
+
+**Incorrect usage (will fail):**
+```json
+{
+  "filters": "{\"limit\": 10}"
+}
+```
+
+**Why?**
+- The tool expects a dictionary/object for `filters`.
+- Passing a string (even if it looks like JSON) will result in a validation error.
+
+**If you want all messages, you can simply omit the filters field:**
+```json
+{}
+```
+
+# What's New (May 2025)
+
+- **Robust user context:** All tools now use `INTERNAL_CHAT_USER` from config/env by default for user context and filtering.
+- **WaitForMessageTool filtering:**
+  - No filters: returns the first message received.
+  - `from_user`: only returns messages from that user.
+  - `mention_only`: only returns messages that mention the configured user (robust regex).
+  - Both: both conditions must be true.
+- **SendMessageTool reply_to_user:**
+  - If `reply_to_user` is set, the message will automatically mention that user unless already present.
+  - This ensures replies always notify the intended recipient, matching modern chat UX.
+- **Debugging:**
+  - All debug output for WaitForMessageTool is written to `/tmp/wait_for_message_debug.log` for troubleshooting.
+
+## Usage Examples
+
+### Wait for any message
+```python
+result = WaitForMessageTool().execute(WaitForMessageInput(team_id="t24", timeout=30))
+```
+
+### Wait for a mention
+```python
+result = WaitForMessageTool().execute(WaitForMessageInput(team_id="t24", mention_only=True, timeout=30))
+```
+
+### Wait for a message from a specific user
+```python
+result = WaitForMessageTool().execute(WaitForMessageInput(team_id="t24", from_user="You", timeout=30))
+```
+
+### Send a reply that always mentions the sender
+```python
+SendMessageTool().execute(SendMessageInput(
+    team_id="t24",
+    user="greg",
+    message="Thanks for your message!",
+    reply_to_user="You"
+))
+# This will send: "@You Thanks for your message!"
+```
+
+### Mention-based workflow
+- Wait for a mention, extract the sender, and reply mentioning them back:
+```python
+wait_result = WaitForMessageTool().execute(WaitForMessageInput(team_id="t24", mention_only=True, timeout=30))
+sender = wait_result.user
+SendMessageTool().execute(SendMessageInput(
+    team_id="t24",
+    user="greg",
+    message="Got your mention!",
+    reply_to_user=sender
+))
+```
+
+### Tool Call Parameter Validation and 'from_user' Usage
+
+**Important:**
+- The `GetUnreadMessages` tool does **not** accept `from_user` as a top-level field. If you want to filter by sender, use `filters.user` instead.
+- Example (correct):
+  ```json
+  {
+    "filters": {"user": "Cline", "limit": 10}
+  }
+  ```
+- Example (incorrect):
+  ```json
+  {
+    "from_user": "Cline", "limit": 10
+  }
+  ```
+  This will be ignored or cause a warning in the logs.
+
+**Agent/Tool-Calling Guidance:**
+- Always validate tool call parameters against the tool's schema before calling.
+- Drop or remap any fields not in the schema (e.g., move `from_user` into `filters.user` if present).
+- If you see errors about invalid parameters, check the tool's schema and usage examples above.
+
 See the `GetUnreadMessagesInput` and `MessageFilter` docstrings for more details and examples. 
