@@ -40,7 +40,18 @@ class SendMessageTool(Tool):
         user = os.environ["INTERNAL_CHAT_USER"]
         team_id = os.environ["INTERNAL_CHAT_TEAM_ID"]
         message = input_data.message
-        reply_to_user = input_data.reply_to_user or ""
+        reply_to_user = input_data.reply_to_user
+        # Robust input validation for reply_to_user
+        if reply_to_user is not None and not isinstance(reply_to_user, str):
+            logging.error(
+                f"[SendMessageTool] Invalid type for reply_to_user: {type(reply_to_user)}. Value: {reply_to_user}"
+            )
+            output = SendMessageOutput(
+                status="error",
+                detail="Invalid type for 'reply_to_user'. Must be a string or null.",
+            )
+            return ToolResponse.from_model(output)
+        reply_to_user = reply_to_user or ""
         if reply_to_user:
             mention = f"@{reply_to_user}"
             if mention.lower() not in message.lower():

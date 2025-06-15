@@ -31,11 +31,11 @@ import logging
 
 # Set up logging to include version in every log line
 logging.basicConfig(
-    format=f"%(asctime)s [%(levelname)s] [v0.2.4] %(message)s",
+    format=f"%(asctime)s [%(levelname)s] [v0.2.7] %(message)s",
     level=logging.INFO,
 )
 
-logging.info(f"[internal_chat_mcp] MCP SSE Server starting, version 0.2.4")
+logging.info(f"[internal_chat_mcp] MCP SSE Server starting, version 0.2.7")
 
 
 def get_available_tools() -> List[Tool]:
