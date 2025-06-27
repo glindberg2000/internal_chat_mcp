@@ -11,6 +11,7 @@ from internal_chat_mcp.interfaces.tool import (
 )
 from pydantic import Field
 import time
+import logging
 
 
 class ToolService:
@@ -52,8 +53,40 @@ class ToolService:
         """
         tool = self.get_tool(tool_name)
 
+        # Strict parameter filtering: only pass fields in the input_model schema
+        schema = tool.input_model.model_json_schema()
+        allowed_fields = set(schema.get("properties", {}).keys())
+        filtered_input = {k: v for k, v in input_data.items() if k in allowed_fields}
+
+        # Auto-serialize dicts to JSON strings for string fields (standardize for all tools)
+        for field, info in schema.get("properties", {}).items():
+            if info.get("type") == "string" and isinstance(
+                filtered_input.get(field), dict
+            ):
+                logging.info(
+                    f"[ToolService] Auto-serializing dict to JSON string for field '{field}' in tool '{tool_name}'"
+                )
+                filtered_input[field] = json.dumps(filtered_input[field])
+
+        # Handle misplaced 'from_user' at top level for GetUnreadMessagesTool
+        if tool_name == "GetUnreadMessages" and "from_user" in input_data:
+            logging.warning(
+                "[ToolService] 'from_user' found at top level; moving to filters.user."
+            )
+            filters = filtered_input.get("filters") or {}
+            if isinstance(filters, dict):
+                filters["user"] = input_data["from_user"]
+                filtered_input["filters"] = filters
+            elif hasattr(filters, "user"):
+                filters.user = input_data["from_user"]
+            # Remove from top level
+            filtered_input.pop("from_user", None)
         # Convert input dictionary to the tool's input model
-        input_model = tool.input_model(**input_data)
+        try:
+            input_model = tool.input_model(**filtered_input)
+        except Exception as e:
+            logging.error(f"[ToolService] Invalid input for tool '{tool_name}': {e}")
+            raise
 
         # Execute the tool with validated input
         response = await tool.execute(input_model)

@@ -1,11 +1,14 @@
 """internal_chat_mcp MCP Server implementation."""
 
-__version__ = "0.2.7"
+__version__ = "0.2.8"
 
 print("=== DEBUG: server_stdio.py loaded ===")
 
 import logging
 import sys
+from fastapi import FastAPI
+from fastapi.responses import JSONResponse
+import uvicorn
 
 # Set up logging to include version in every log line
 logging.basicConfig(
@@ -54,6 +57,34 @@ def get_available_tools() -> List[Tool]:
 #     ]
 
 
+def get_manifest():
+    tools = get_available_tools()
+    return {
+        "version": "1.0",
+        "tools": [
+            {
+                "name": tool.name,
+                "description": tool.description,
+                "input_schema": tool.input_model.model_json_schema(),
+                "output_schema": (
+                    tool.output_model.model_json_schema()
+                    if hasattr(tool, "output_model") and tool.output_model
+                    else None
+                ),
+            }
+            for tool in tools
+        ],
+    }
+
+
+app = FastAPI()
+
+
+@app.get("/mcp/manifest")
+async def manifest():
+    return JSONResponse(get_manifest())
+
+
 def main():
     """Entry point for the server."""
     logging.info(f"[internal_chat_mcp] MCP Server starting, version {__version__}")
@@ -69,7 +100,10 @@ def main():
     # resource_service.register_resources(get_available_resources())
     # resource_service.register_mcp_handlers(mcp)
 
-    mcp.run()
+    # Start FastAPI server for manifest endpoint
+    uvicorn.run(app, host="0.0.0.0", port=6969, log_level="info", reload=False)
+
+    # mcp.run()  # Optionally keep this if you want to run the original MCP server logic
 
 
 if __name__ == "__main__":

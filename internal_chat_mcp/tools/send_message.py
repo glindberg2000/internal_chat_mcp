@@ -10,9 +10,10 @@ import logging
 
 class SendMessageInput(BaseToolInput):
     message: str = Field(..., description="Message content")
+    # NOTE for LLMs/clients: reply_to_user should be omitted if not used, or set to a string. Do NOT send null explicitly in JSON; if you must, null will be treated as not set.
     reply_to_user: Optional[str] = Field(
-        None,
-        description="If set, automatically mention this user in the message if not already present.",
+        default=None,
+        description="(Optional) Username to mention in the message. Omit this field or set to a string. Do NOT send null explicitly; if null is sent, it will be treated as not set.",
     )
 
 
@@ -40,18 +41,19 @@ class SendMessageTool(Tool):
         user = os.environ["INTERNAL_CHAT_USER"]
         team_id = os.environ["INTERNAL_CHAT_TEAM_ID"]
         message = input_data.message
-        reply_to_user = input_data.reply_to_user
-        # Robust input validation for reply_to_user
-        if reply_to_user is not None and not isinstance(reply_to_user, str):
+        reply_to_user = getattr(input_data, "reply_to_user", None)
+        # Accept omitted, None, or string for reply_to_user. Treat null as not set.
+        if reply_to_user is None or reply_to_user == "null":
+            reply_to_user = ""
+        elif not isinstance(reply_to_user, str):
             logging.error(
                 f"[SendMessageTool] Invalid type for reply_to_user: {type(reply_to_user)}. Value: {reply_to_user}"
             )
             output = SendMessageOutput(
                 status="error",
-                detail="Invalid type for 'reply_to_user'. Must be a string or null.",
+                detail="Invalid type for 'reply_to_user'. Must be a string or omitted.",
             )
             return ToolResponse.from_model(output)
-        reply_to_user = reply_to_user or ""
         if reply_to_user:
             mention = f"@{reply_to_user}"
             if mention.lower() not in message.lower():

@@ -12,6 +12,7 @@ import uvicorn
 from typing import List, Dict, Any
 from starlette.middleware import Middleware
 from starlette.middleware.cors import CORSMiddleware
+from starlette.responses import JSONResponse
 
 from internal_chat_mcp.services.tool_service import ToolService
 from internal_chat_mcp.services.resource_service import ResourceService
@@ -31,11 +32,11 @@ import logging
 
 # Set up logging to include version in every log line
 logging.basicConfig(
-    format=f"%(asctime)s [%(levelname)s] [v0.2.7] %(message)s",
+    format=f"%(asctime)s [%(levelname)s] [v0.2.8] %(message)s",
     level=logging.INFO,
 )
 
-logging.info(f"[internal_chat_mcp] MCP SSE Server starting, version 0.2.7")
+logging.info(f"[internal_chat_mcp] MCP SSE Server starting, version 0.2.8")
 
 
 def get_available_tools() -> List[Tool]:
@@ -53,6 +54,30 @@ def get_available_tools() -> List[Tool]:
 #         HelloWorldResource(),
 #         UserProfileResource(),
 #     ]
+
+
+def get_manifest():
+    tools = get_available_tools()
+    return {
+        "version": "1.0",
+        "tools": [
+            {
+                "name": tool.name,
+                "description": tool.description,
+                "input_schema": tool.input_model.model_json_schema(),
+                "output_schema": (
+                    tool.output_model.model_json_schema()
+                    if hasattr(tool, "output_model") and tool.output_model
+                    else None
+                ),
+            }
+            for tool in tools
+        ],
+    }
+
+
+async def manifest(request):
+    return JSONResponse(get_manifest())
 
 
 def create_starlette_app(mcp_server: Server) -> Starlette:
@@ -85,6 +110,7 @@ def create_starlette_app(mcp_server: Server) -> Starlette:
         routes=[
             Route("/sse", endpoint=handle_sse),
             Mount("/messages/", app=sse.handle_post_message),
+            Route("/mcp/manifest", endpoint=manifest),
         ],
         middleware=middleware,
     )
