@@ -5,6 +5,7 @@ description = "internal_chat_mcp MCP server"
 authors = [{ name = "Greg Lindberg", email = "greglindberg@gmail.com" }]
 requires-python = ">=3.8"
 dependencies = [
+<<<<<<< HEAD
     "mcp[cli]",
     "pydantic>=2.0.0",
     "rich>=13.0.0",
@@ -13,6 +14,16 @@ dependencies = [
     "sqlalchemy>=2.0.0",
     "aiosqlite>=0.21.0",
     "alembic>=1.15.0"
+=======
+    "mcp==1.9.4",
+    "pydantic==2.11.7",
+    "rich==14.0.0",
+    "uvicorn==0.34.3",
+    "websockets==15.0.1",
+    "sqlalchemy==2.0.41",
+    "aiosqlite==0.21.0",
+    "alembic==1.16.2"
+>>>>>>> 30b9061
 ]
 
 [build-system]
