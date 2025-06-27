@@ -1,3 +1,93 @@
+# Internal Chat MCP - Universal Reproducible Setup
+
+## 🚀 Quickstart (Zero-Fail Install)
+
+**Requirements:**
+- Python 3.13.2 (or 3.10/3.11, but 3.13.2 is the known-good version)
+- Git
+
+**1. Clone the repo and checkout the known-good commit:**
+```sh
+git clone <repo-url> yourdir
+cd yourdir/internal_chat_mcp
+git fetch origin d75f5eea1b1ac2338ce42a544acb6205519d01df
+git checkout d75f5eea1b1ac2338ce42a544acb6205519d01df
+```
+
+**2. Create and activate a dedicated virtual environment:**
+```sh
+python3.13 -m venv .venv
+source .venv/bin/activate
+```
+
+**3. Install all dependencies (frozen, reproducible):**
+```sh
+pip install --upgrade pip
+pip install -e .
+```
+
+**4. Configure Cursor MCP integration:**
+- Edit (or create) `.cursor/mcp.json` in your project root:
+
+```json
+{
+    "mcpServers": {
+        "internal_chat_mcp": {
+            "command": "/absolute/path/to/your/internal_chat_mcp/.venv/bin/internal-chat-mcp",
+            "args": ["--mode", "stdio"],
+            "cwd": "/absolute/path/to/your/internal_chat_mcp",
+            "env": {
+                "INTERNAL_CHAT_TEAM_ID": "PDF_Extractor",
+                "INTERNAL_CHAT_USER": "<YOUR_USERNAME>",
+                "BACKEND_HOST": "localhost:8000"
+            }
+        }
+    }
+}
+```
+- Replace `<YOUR_USERNAME>` with your chat username.
+- Make sure the `command` path matches your venv location.
+
+**5. (Optional) Windsurf/Containerized Config**
+- Use the same `.cursor/mcp.json` but mount your venv and code into the container.
+- Example Dockerfile/compose snippet:
+  ```Dockerfile
+  FROM python:3.13
+  WORKDIR /app
+  COPY . .
+  RUN python -m venv .venv && . .venv/bin/activate && pip install -e .
+  ENV INTERNAL_CHAT_TEAM_ID=PDF_Extractor
+  ENV INTERNAL_CHAT_USER=<YOUR_USERNAME>
+  ENV BACKEND_HOST=localhost:8000
+  CMD [".venv/bin/internal-chat-mcp", "--mode", "stdio"]
+  ```
+
+---
+
+## Troubleshooting
+- **0 tools enabled in Cursor:**
+  - Double-check the `command` path in `.cursor/mcp.json` points to the correct venv binary.
+  - Make sure you are on commit `d75f5eea1b1ac2338ce42a544acb6205519d01df`.
+  - Use only the frozen dependency versions in `requirements.txt`/`pyproject.toml`.
+- **Still not working?**
+  - Try Python 3.13.2 specifically.
+  - Recreate your venv and reinstall.
+  - Ask a teammate to share their working venv or config.
+
+---
+
+## Updating or Upgrading
+- Only update dependencies or code one at a time, and test with Cursor after each change.
+- If something breaks, revert to this baseline and bisect the change.
+
+---
+
+## For Developers
+- This setup is guaranteed to work for all devs, on any machine, with zero config drift.
+- If you need to change your chat username, just edit the `INTERNAL_CHAT_USER` field in `.cursor/mcp.json`.
+
+---
+
 # internal_chat_mcp
 
 internal_chat_mcp MCP server
