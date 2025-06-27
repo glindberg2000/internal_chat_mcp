@@ -9,7 +9,10 @@ dependencies = [
     "pydantic>=2.0.0",
     "rich>=13.0.0",
     "uvicorn>=0.15.0",
-    "websockets"
+    "websockets",
+    "sqlalchemy>=2.0.0",
+    "aiosqlite>=0.21.0",
+    "alembic>=1.15.0"
 ]
 
 [build-system]
