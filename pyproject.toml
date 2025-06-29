@@ -1,6 +1,6 @@
 [project]
 name = "internal_chat_mcp"
-version = "0.2.8"
+version = "0.2.9"
 description = "internal_chat_mcp MCP server"
 authors = [{ name = "Greg Lindberg", email = "greglindberg@gmail.com" }]
 requires-python = ">=3.8"
@@ -31,4 +31,4 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project.scripts]
-internal-chat-mcp = "internal_chat_mcp.server:main" 
+internal_chat_mcp = "internal_chat_mcp.server:main"  # Use underscores for CLI binary 
